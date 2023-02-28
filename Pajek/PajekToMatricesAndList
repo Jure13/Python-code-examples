@@ -1,0 +1,170 @@
+#Code which reads data from Pajek file and converts it into matrices (incidence and neighbour) and a list (neighbouring)
+import copy
+def citajPisiListuSusjedstva(datoteka):
+    listaSusjedstva = {}
+
+    with open(datoteka, 'r') as dat:
+        vrhovi = False
+        bridovi = False
+        usmjereni = False
+
+        redovi = dat.readlines()
+        for red in redovi:
+            if "*Vertices" in red:
+                vrhovi = True
+            if "*Arcs" in red:
+                usmjereni = True
+                vrhovi = False
+            if "*Edges" in red:
+                bridovi = True 
+                usmjereni = False           
+            else:
+                if red.strip():                    
+                    if vrhovi == True:
+                        if "*Vertices" not in red:
+                            #provjera
+                            listaSusjedstva[int(red.split()[0])] = []
+                        #print(red)
+                    if usmjereni == True:
+                        if "*Arcs" not in red:
+                            #print(red)
+                            pocetni, ciljni = red.split()[0:2]
+                            #print(pocetni, ciljni)
+                            listaSusjedstva[pocetni].append(ciljni)
+                            #print(listaSusjedstva)
+                    if bridovi == True:
+                        if "*Edges" not in red:
+                            #print(red)
+                            pocetni, ciljni = red.split()
+                            #print(pocetni, ciljni)
+                            listaSusjedstva[int(pocetni)].append(int(ciljni))
+                            listaSusjedstva[int(ciljni)].append(int(pocetni))     
+                            #print(listaSusjedstva)
+    return listaSusjedstva
+
+def pretvoriMatricuSusjedstva(listaSusjedstva):
+    velicinaMatrice = len(listaSusjedstva)
+    matrica = [[0 for stupac in range(velicinaMatrice)] for red in range(velicinaMatrice)]
+    brojac = 0
+    
+    for red in matrica:
+        brojac += 1
+        for susjed in listaSusjedstva[brojac]:
+            #print(listaSusjedstva)
+            #print(red)
+            #print(listaSusjedstva[brojac])
+            red[brojac - 1] = 0
+            red[susjed - 1] = 1
+            #print(red)
+     
+    return matrica
+
+def pretvoriMatricuIncidencije(listaSusjedstva):
+    brojStupaca = 0
+    matricaSusjedstva = pretvoriMatricuSusjedstva(listaSusjedstva)
+    brRedova = len(matricaSusjedstva)
+    brStupaca = len(matricaSusjedstva[0])
+    for red in range(brRedova):
+        for stupac in range(brStupaca):
+            if (red < stupac):
+                if matricaSusjedstva[red][stupac] == 1:
+                    brojStupaca += 1
+                    
+    brojRedova = len(listaSusjedstva)    
+    matrica = []
+    bridovi = []
+    
+    for keyValue in listaSusjedstva.items():
+        for ciljni in keyValue[1]:
+            bridovi.append((keyValue[0], ciljni))
+            if keyValue[0] in listaSusjedstva[ciljni]:
+                listaSusjedstva[ciljni].remove(keyValue[0])
+    
+    for pocetni in listaSusjedstva.keys():
+        red = []
+        for ciljni in bridovi:
+            if pocetni in ciljni:
+                red.append(1)
+            else:
+                red.append(0)
+        matrica.append(red)
+    
+    return matrica
+
+#2. zadatak
+def brVrhova(listaSusjedstva):
+    return len(listaSusjedstva)
+
+def brBridova(listaSusjedstva):
+    pass
+
+def stupanjVrha(listaSusjedstva):
+    popis = []
+    """
+    for par in listaSusjedstva.items():
+        print(par)
+        popis.append((par[0], len(par[1])))
+        print(popis)"""
+    for key, value in listaSusjedstva.items():
+        popis.append((key, len(value)))
+
+    return popis
+
+def vrhoviMaksIncBridova(listaSusjedstva):
+    popis = []
+    stupnjeviVrhova = stupanjVrha(listaSusjedstva)
+    maks = 0
+    
+    for key, value in stupnjeviVrhova:
+        if value >= maks:
+            maks = value
+            
+    for key, value in stupnjeviVrhova:
+        if value == maks:
+            popis.append(key)
+            
+    return popis    
+
+#3. zadatak
+def provjeriEulera(listaSusjedstva):
+    parni = []
+
+    stupanj = stupanjVrha(listaSusjedstva)
+    
+    for clan in stupanj:
+        if clan[1] % 2 != 0:
+            return False
+            
+    return True
+
+def main():
+    listaSusjedstva = citajPisiListuSusjedstva("euler.net.txt")    
+    print("Lista susjedstva:")
+    print(listaSusjedstva)
+    #"lista susjedstva" je rječnik...
+    
+    matricaSusjedstva = pretvoriMatricuSusjedstva(listaSusjedstva)
+    print("Matrica susjedstva:")
+    for redSusjedstva in matricaSusjedstva:
+        print(redSusjedstva)
+    print(matricaSusjedstva)
+    temp = copy.deepcopy(listaSusjedstva)
+    matricaIncidencije = pretvoriMatricuIncidencije(temp)
+    #print("Matrica incidencije:")
+    #for redIncidencije in matricaIncidencije:
+    #    print(redIncidencije)
+
+    #2. zadatak
+    print("Broj vrhova u ovoj listi je: ", brVrhova(listaSusjedstva))    
+    #broj bridova riješen u prethodnom zadatku
+    print("Stupanj svakog vrha: ", stupanjVrha(listaSusjedstva))
+    print("Vrhovi s maksimalnim brojem incidentnih bridova: ", vrhoviMaksIncBridova(listaSusjedstva))
+    
+    #3. zadatak
+    if (provjeriEulera(listaSusjedstva) == True):
+        print("Graf je Eulerov!")
+    else:
+        print("Graf nije Eulerov!")
+
+if __name__ == "__main__":
+    main()
